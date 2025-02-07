@@ -18,6 +18,10 @@ A Turing machine with a binary tape. The output is the final state of the tape f
 
 A Turing machine on a binary tape with an extra ouput tape. Each transition rule contains an extra value that is written to the second tape, one of 0, 1 and none.
 
+### λ Calculus
+
+The program is a lambda term. To be run it is applies to the string "10". The program is valid if after the evaluation only a string with 0s and 1s remains. This string is the result of the program.
+
 ### SK(I) combinatory logic
 
 Applies S and K transformations from [combinatory logic](https://en.wikipedia.org/wiki/Combinatory_logic). The program is a sequence of Ss and Ks followed by terms `01`. The program is valid if after expanding the rules it leaves only 0s and 1s.
@@ -37,6 +41,10 @@ A Turing machine with a binary tape. The output is the number of 1s from the fin
 ### Turing machine with output counter
 
 A Turing machine on a binary tape with an extra ouput tape. Each transition rule may increment the output counter, which starts with 0.
+
+### λ Calculus
+
+The program is a lambda term. To be run it is applies to a single 1. A valid program is valid should be evaluated to a string of 1s. The number of 1s is the result of the evaluation.
 
 ### SK(I) combinarory logic
 
