@@ -105,9 +105,73 @@ fn bfbin_from_idx(idx: u64) -> ArrayString<BFBIN_LENGTH_LIMIT> {
     bfbin_from_len_idx(len, idx_in_len)
 }
 
+enum Outcome {
+    Error,
+    Timeout,
+    Out(Vec<bool>),
+}
+
+struct Result {
+    steps: usize,
+    outcome: Outcome,
+}
+
+// . + < >
+#[derive(Debug)]
+enum BfBinInstruction {
+  Print,
+  Plus,
+  Left,
+  Right,
+  StartLoop(usize),
+  EndLoop(usize),
+}
+
+#[derive(Debug)]
+struct BfBinProgram {
+    instructions: Vec<BfBinInstruction>
+}
+
+fn bfbin_compile(source: &str) -> BfBinProgram {
+    let mut open_loops = Vec::new();
+    let mut program = BfBinProgram { instructions: Vec::new() };
+    for c in source.chars() {
+        let inst = match c {
+            '.' => BfBinInstruction::Print,
+            '+' => BfBinInstruction::Plus,
+            '<' => BfBinInstruction::Left,
+            '>' => BfBinInstruction::Right,
+            '[' => {
+                open_loops.push(program.instructions.len());
+                BfBinInstruction::StartLoop(0)
+            },
+            ']' => {
+                let start = open_loops.pop().unwrap();
+                program.instructions[start] = BfBinInstruction::StartLoop(program.instructions.len());
+                BfBinInstruction::EndLoop(start)
+            },
+            _ => continue,
+        };
+        program.instructions.push(inst);
+    }
+
+    program
+}
+
+fn bfbin_run(program: &str, max_steps: usize) -> Result {
+    Result {
+        steps: 0,
+        outcome: Outcome::Error
+    }
+}
+
 fn main() {
     println!("{:?}", BFBIN_COUNTS);
     println!("{:?}", BFBIN_CUMULATIVE);
 
-    println!("{} {}", 123457, bfbin_from_idx(1234567));
+    let prog_source = bfbin_from_idx(1234567);
+    println!("{} {}", 123457, prog_source);
+
+    let prog = bfbin_compile(&prog_source);
+    println!("{:?}", &prog);
 }
