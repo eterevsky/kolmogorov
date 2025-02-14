@@ -105,19 +105,21 @@ fn bfbin_from_idx(idx: u64) -> ArrayString<BFBIN_LENGTH_LIMIT> {
     bfbin_from_len_idx(len, idx_in_len)
 }
 
+#[derive(Debug)]
 enum Outcome {
     Error,
     Timeout,
     Out(Vec<bool>),
 }
 
+#[derive(Debug)]
 struct Result {
     steps: usize,
     outcome: Outcome,
 }
 
 // . + < >
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum BfBinInstruction {
   Print,
   Plus,
@@ -158,10 +160,71 @@ fn bfbin_compile(source: &str) -> BfBinProgram {
     program
 }
 
-fn bfbin_run(program: &str, max_steps: usize) -> Result {
-    Result {
-        steps: 0,
-        outcome: Outcome::Error
+fn bfbin_maybe_extend_tape(tape: &mut Vec<bool>, pos: usize) {
+    while pos >= tape.len() {
+        tape.push(false);
+    }
+}
+
+fn bfbin_run(source: &str, max_steps: usize) -> Result {
+    let program = bfbin_compile(source);
+    let mut step = 0;
+    let mut tape = Vec::new();
+    let mut output = Vec::new();
+    let mut pos = 0;
+    let mut ip = 0;
+
+    while step < max_steps && ip < program.instructions.len() {
+        let inst = program.instructions[ip];
+        match inst {
+            BfBinInstruction::Print => { 
+                bfbin_maybe_extend_tape(&mut tape, pos);
+                output.push(tape[pos]);
+                ip += 1;
+            },
+            BfBinInstruction::Plus => {
+                bfbin_maybe_extend_tape(&mut tape, pos);
+                tape[pos] = !tape[pos];
+                ip += 1;
+            },
+            BfBinInstruction::Left => {
+                if pos == 0 {
+                    return Result {
+                        steps: step,
+                        outcome: Outcome::Error,
+                    }
+                }
+                pos -= 1;
+                ip += 1;
+            },
+            BfBinInstruction::Right => {
+                pos += 1;
+                ip += 1;
+            },
+            BfBinInstruction::StartLoop(end) => {
+                bfbin_maybe_extend_tape(&mut tape, pos);
+                ip = if tape[pos] {
+                    ip + 1
+                } else {
+                    end + 1
+                }
+            },
+            BfBinInstruction::EndLoop(start) => {
+                ip = start;
+            }
+        }
+    }
+
+    if step >= max_steps {
+        Result {
+            steps: step,
+            outcome: Outcome::Timeout
+        }
+    } else {
+        Result {
+            steps: step,
+            outcome: Outcome::Out(output)
+        }
     }
 }
 
@@ -174,4 +237,7 @@ fn main() {
 
     let prog = bfbin_compile(&prog_source);
     println!("{:?}", &prog);
+
+    let out = bfbin_run(".+.>[.]+", 1000);
+    println!("{:?}", &out);
 }
