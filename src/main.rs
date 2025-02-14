@@ -1,6 +1,7 @@
 use arrayvec::ArrayString;
+use std::collections::HashSet;
 
-const BFBIN_LENGTH_LIMIT: usize = 12;
+const BFBIN_LENGTH_LIMIT: usize = 20;
 
 
 // Count the number of valid binary BF programs without `[]`
@@ -118,6 +119,21 @@ struct Result {
     outcome: Outcome,
 }
 
+impl std::fmt::Display for Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self.outcome {
+            Outcome::Error => write!(f, "E")?,
+            Outcome::Timeout => write!(f, "T")?,
+            Outcome::Out(ref out) => {
+                for v in out {
+                    write!(f, "{}", if *v {1} else {0})?
+                }
+            }
+        };
+        std::fmt::Result::Ok(())
+    }
+}
+
 // . + < >
 #[derive(Clone, Copy, Debug)]
 enum BfBinInstruction {
@@ -213,6 +229,7 @@ fn bfbin_run(source: &str, max_steps: usize) -> Result {
                 ip = start;
             }
         }
+        step += 1;
     }
 
     if step >= max_steps {
@@ -240,4 +257,19 @@ fn main() {
 
     let out = bfbin_run(".+.>[.]+", 1000);
     println!("{:?}", &out);
+
+    let mut generated = HashSet::new();
+
+    for idx in 0..10_000_000_000 {
+        let prog_source = bfbin_from_idx(idx);
+        let result = bfbin_run(&prog_source, 1000);
+
+        if let Outcome::Out(ref out) = result.outcome {
+            if !generated.contains(out) {
+                println!("{} {} {}", idx, prog_source, result);
+                generated.insert(out.clone());
+            }
+        }
+
+    }
 }
