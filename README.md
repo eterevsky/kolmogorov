@@ -1,4 +1,4 @@
-# Exploring numbers, strings and sequences with low Kolmogorov complexity
+# Exploring Kolmogorov complexity
 
 Kolmogorov complexity is the amount of information in a given object, measured as the length of a minimal program that could generate it. This project aims to compute the Kolmogorov complexity of numbers and sequences by generating them with BrainFuck programs, Turing machines and Lambda calculus.
 
