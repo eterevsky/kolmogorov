@@ -68,7 +68,7 @@ impl BfGenerator {
             let mut count = non_loop_instructions.len() * len_counts[len - 1];
 
             // [ ... ] ...
-            let mut inner_len = 1;
+            let mut inner_len = 0;
             while inner_len + 2 <= len {
                 count += len_counts[inner_len] * len_counts[len - inner_len - 2];
                 inner_len += 1;
@@ -107,7 +107,7 @@ impl BfGenerator {
         let loop_idx = idx - self.non_loop_instructions.len() * prev_count;
         let mut cumulative = 0;
 
-        let mut inner_len = 1;
+        let mut inner_len = 0;
         loop {
             let count = self.len_counts[inner_len] * self.len_counts[len - inner_len - 2];
             let next_cumulative = cumulative + count;
@@ -137,8 +137,8 @@ impl BfGenerator {
         }
         program
             .0
-            .insert(0, BfInstruction::StartLoop(program.0.len() + 1));
-        program.0.push(BfInstruction::EndLoop(0));
+            .insert(0, BfInstruction::StartLoop(inner_len + 2));
+        program.0.push(BfInstruction::EndLoop(inner_len + 1));
 
         let head_len = program.0.len();
 
