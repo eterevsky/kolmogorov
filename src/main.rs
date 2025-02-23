@@ -81,19 +81,18 @@ use crate::def::{CompSystem, ProgGenerator, ProgResult};
 
 fn main() {
     let comp = BfCount::new(1000);
-    let mut generator = comp.generate(100);
-    // let mut generated = HashSet::new();
+    let mut generator = comp.generate(1_000_000_000);
+    let mut generated = HashSet::new();
 
     while let Some((idx, program)) = generator.next() {
         let result = comp.execute(&program);
+        // println!("{} {} {:?}", idx, &program, result);
 
-        println!("{} {} {:?}", idx, &program, result);
-
-        // if let ProgResult::Out{output, steps: _} = result {
-        //     if !generated.contains(&output) {
-        //         println!("{} {:?} {}", idx, program, output);
-        //         generated.insert(output.clone());
-        //     }
-        // }
+        if let ProgResult::Out{output, steps: _} = result {
+            if !generated.contains(&output) {
+                println!("{} {} {}", idx, program, output);
+                generated.insert(output.clone());
+            }
+        }
     }
 }

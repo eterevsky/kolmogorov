@@ -143,13 +143,7 @@ impl BfGenerator {
         let head_len = program.0.len();
 
         let tail = self.from_len_idx(len - inner_len - 2, outer_idx);
-        for inst in tail.0.iter() {
-            program.0.push(match *inst {
-                BfInstruction::StartLoop(n) => BfInstruction::StartLoop(n + head_len),
-                BfInstruction::EndLoop(n) => BfInstruction::EndLoop(n + head_len),
-                _ => *inst,
-            });
-        }
+        program.0.extend_from_slice(&tail.0);
 
         program
     }
