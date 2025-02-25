@@ -1,12 +1,12 @@
 use crate::def::{ProgGenerator, ProgResult};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BfInstruction {
-    Print,
+    Right,
+    Left,
     Plus,
     Minus,
-    Left,
-    Right,
+    Print,
     // The parameter is the offset from the current instruction to the first
     // instruction after the loop.
     StartLoop(usize),
@@ -15,8 +15,45 @@ pub enum BfInstruction {
     EndLoop(usize),
 }
 
+// +-.<>[]
+
+impl BfInstruction {
+    fn idx(self) -> usize {
+        match self {
+            BfInstruction::Plus => 0,
+            BfInstruction::Minus => 1,
+            BfInstruction::Print => 2,
+            BfInstruction::Left => 3,
+            BfInstruction::Right => 4,
+            BfInstruction::StartLoop(_) => 5,
+            BfInstruction::EndLoop(_) => 6,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct BfProgram(pub Vec<BfInstruction>);
+
+impl BfProgram {
+    fn fix_loops(&mut self) {
+        let mut starts = Vec::new();
+        let mut pos = 0;
+
+        while pos < self.0.len() {
+            let inst = self.0[pos];
+            match inst {
+                BfInstruction::StartLoop(_) => starts.push(pos),
+                BfInstruction::EndLoop(_) => {
+                    let start = starts.pop().unwrap();
+                    self.0[start] = BfInstruction::StartLoop(pos + 1 - start);
+                    self.0[pos] = BfInstruction::EndLoop(pos - start);
+                }
+                _ => (),
+            }
+            pos += 1;
+        }
+    }
+}
 
 impl std::fmt::Display for BfProgram {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -35,140 +72,210 @@ impl std::fmt::Display for BfProgram {
     }
 }
 
-pub struct BfGenerator {
-    max_idx: usize,
-    cur_idx: usize,
-    cur_len: usize,
-    non_loop_instructions: Vec<BfInstruction>,
-    // Count of all Brainfuck programs of a given length.
-    len_counts: Vec<usize>,
-    cumulative_counts: Vec<usize>,
+struct BfSettings {
+    has_minus: bool,
+    next_inst: [Option<BfInstruction>; 8],
 }
 
-impl BfGenerator {
-    pub fn new( max_idx: usize, has_minus: bool, has_print: bool) -> Self {
-        let mut len_counts = vec![1];
-        let mut cumulative_counts = vec![0, 1];
-        let mut non_loop_instructions = vec![
-            BfInstruction::Left,
-            BfInstruction::Right,
-            BfInstruction::Plus,
-        ];
+impl BfSettings {
+    fn new(has_minus: bool, has_print: bool) -> Self {
+        assert!(BfInstruction::Plus.idx() == 0);
+        let mut instructions = vec![BfInstruction::Plus];
 
         if has_minus {
-            non_loop_instructions.push(BfInstruction::Minus);
+            instructions.push(BfInstruction::Minus);
         }
 
         if has_print {
-            non_loop_instructions.push(BfInstruction::Print);
+            instructions.push(BfInstruction::Print);
+        }
+        instructions.push(BfInstruction::Left);
+        instructions.push(BfInstruction::Right);
+        instructions.push(BfInstruction::StartLoop(0));
+        instructions.push(BfInstruction::EndLoop(0));
+
+        let mut next_inst = [None; 8];
+
+        for i in 0..instructions.len() - 1 {
+            let inst = instructions[i];
+            next_inst[inst.idx()] = Some(instructions[i + 1]);
         }
 
-        let mut len = 1;
-        while *len_counts.last().unwrap() <= max_idx {
-            let mut count = non_loop_instructions.len() * len_counts[len - 1];
-
-            // [ ... ] ...
-            let mut inner_len = 0;
-            while inner_len + 2 <= len {
-                count += len_counts[inner_len] * len_counts[len - inner_len - 2];
-                inner_len += 1;
-            }
-
-            len_counts.push(count);
-            cumulative_counts.push(cumulative_counts[len] + count);
-            len += 1;
-        }
-
-        BfGenerator {
-            max_idx,
-            cur_idx: 0,
-            cur_len: 0,
-            len_counts,
-            cumulative_counts,
-            non_loop_instructions,
+        BfSettings {
+            has_minus,
+            next_inst,
         }
     }
 
-    fn from_len_idx(&self, len: usize, idx: usize) -> BfProgram {
-        if len == 0 {
-            return BfProgram(Vec::new());
-        }
+    fn first(&self) -> BfInstruction {
+        BfInstruction::Plus
+    }
 
-        let prev_count = self.len_counts[len - 1];
+    fn next(&self, inst: BfInstruction) -> Option<BfInstruction> {
+        self.next_inst[inst.idx()]
+    }
+}
 
-        for i in 0..self.non_loop_instructions.len() {
-            if idx < prev_count * (i + 1) {
-                let mut program = self.from_len_idx(len - 1, idx - i * prev_count);
-                program.0.insert(0, self.non_loop_instructions[i]);
-                return program;
+fn next_slice(
+    settings: &BfSettings,
+    slice: &mut [BfInstruction],
+    start_pos: usize,
+) -> Option<usize> {
+    let mut pos = slice.len();
+    let mut open_loops = 0;
+
+    while pos > 0 {
+        pos -= 1;
+        let inst = slice[pos];
+        match inst {
+            BfInstruction::EndLoop(_) => {
+                open_loops += 1;
             }
-        }
-
-        let loop_idx = idx - self.non_loop_instructions.len() * prev_count;
-        let mut cumulative = 0;
-
-        let mut inner_len = 0;
-        loop {
-            let count = self.len_counts[inner_len] * self.len_counts[len - inner_len - 2];
-            let next_cumulative = cumulative + count;
-            if loop_idx < next_cumulative {
-                break;
+            BfInstruction::StartLoop(_) => {
+                open_loops -= 1;
             }
-
-            cumulative = next_cumulative;
-            inner_len += 1;
+            _ => (),
         }
 
-        let inner_outer_idx = loop_idx - cumulative;
-        let outer_idx = inner_outer_idx / self.len_counts[inner_len];
-        let inner_idx = inner_outer_idx % self.len_counts[inner_len];
+        if pos >= start_pos {
+            continue;
+        }
 
-        let mut program = self.from_len_idx(inner_len, inner_idx);
-        for inst in program.0.iter_mut() {
-            match *inst {
-                BfInstruction::StartLoop(n) => {
-                    *inst = BfInstruction::StartLoop(n + 1);
+        let mut maybe_next_inst = settings.next(inst);
+        while maybe_next_inst.is_some() {
+            let next_inst = maybe_next_inst.unwrap();
+
+            if open_loops == 0 {
+                if let BfInstruction::EndLoop(_) = next_inst {
+                    maybe_next_inst = settings.next(next_inst);
+                    continue;
                 }
-                BfInstruction::EndLoop(n) => {
-                    *inst = BfInstruction::EndLoop(n + 1);
-                }
-                _ => (),
             }
+
+            let open_loops_after = match next_inst {
+                BfInstruction::StartLoop(_) => open_loops + 1,
+                BfInstruction::EndLoop(_) => open_loops - 1,
+                _ => open_loops,
+            };
+            let remaining_positions = slice.len() - pos - 1;
+            if remaining_positions < open_loops_after {
+                maybe_next_inst = settings.next(next_inst);
+                continue;
+            }
+
+            slice[pos] = next_inst;
+
+            for i in (pos + 1)..(slice.len() - open_loops_after) {
+                slice[i] = settings.first();
+            }
+
+            for i in (slice.len() - open_loops_after)..slice.len() {
+                slice[i] = BfInstruction::EndLoop(0);
+            }
+            return Some(pos);
         }
-        program
-            .0
-            .insert(0, BfInstruction::StartLoop(inner_len + 2));
-        program.0.push(BfInstruction::EndLoop(inner_len + 1));
+    }
 
-        let head_len = program.0.len();
+    None
+}
 
-        let tail = self.from_len_idx(len - inner_len - 2, outer_idx);
-        program.0.extend_from_slice(&tail.0);
+fn next_program(
+    settings: &BfSettings,
+    program: &mut Vec<BfInstruction>,
+    start_pos: usize,
+) -> usize {
+    let updated = next_slice(settings, &mut program[..], start_pos);
 
-        program
+    if let Some(pos) = updated {
+        pos
+    } else {
+        for i in 0..program.len() {
+            program[i] = settings.first();
+        }
+        program.push(settings.first());
+        0
+    }
+}
+
+pub struct BfGenerator {
+    settings: BfSettings,
+    current: BfProgram,
+    started: bool,
+}
+
+impl BfGenerator {
+    pub fn new(has_minus: bool, has_print: bool) -> Self {
+        BfGenerator {
+            settings: BfSettings::new(has_minus, has_print),
+            current: BfProgram(Vec::new()),
+            started: false,
+        }
     }
 }
 
 impl ProgGenerator<BfProgram> for BfGenerator {
-    fn next(&mut self) -> Option<(usize, BfProgram)> {
-        let cur_idx = self.cur_idx;
-        self.cur_idx += 1;
-
-        if cur_idx >= self.max_idx {
-            return None;
+    fn next<'a>(&'a mut self) -> &'a BfProgram {
+        if !self.started {
+            self.started = true;
+            return &self.current;
         }
 
-        if cur_idx >= self.cumulative_counts[self.cur_len + 1] {
-            self.cur_len += 1;
+        let len = self.current.0.len();
+        let mut min_modified = next_program(&self.settings, &mut self.current.0, len);
+
+        let mut unverified = true;
+
+        while unverified {
+            let min_affected = if min_modified == 0 {
+                0
+            } else {
+                min_modified - 1
+            };
+
+            unverified = false;
+
+            let len = self.current.0.len();
+            for i in min_affected..(len - 1) {
+                if self.current.0[i] == BfInstruction::Left
+                    && self.current.0[i + 1] == BfInstruction::Right
+                    || self.current.0[i] == BfInstruction::Right
+                        && self.current.0[i + 1] == BfInstruction::Left
+                    || (!self.settings.has_minus
+                        && self.current.0[i] == BfInstruction::Plus
+                        && self.current.0[i + 1] == BfInstruction::Plus)
+                {
+                    // println!("next1 {} {}", &self.current, i + 2);
+                    let modified = next_program(&self.settings, &mut self.current.0, i + 2);
+                    if modified < min_modified {
+                        min_modified = modified;
+                    }
+                    // println!("next2 {} {}", &self.current, i + 2);
+                    unverified = true;
+                    break;
+                }
+            }
+
+            if unverified {
+                continue;
+            }
+
+            if min_modified == 0 {
+                let first_inst = *self.current.0.first().unwrap();
+                match first_inst {
+                    BfInstruction::Left | BfInstruction::StartLoop(_) => {
+                        // println!("next1 {} {}", &self.current, 1);
+                        next_program(&self.settings, &mut self.current.0, 1);
+                        // println!("next2 {} {}", &self.current, 1);
+                        unverified = true;
+                    }
+                    _ => (),
+                }
+            }
         }
 
-        Some((
-            cur_idx,
-            self.from_len_idx(
-                self.cur_len,
-                cur_idx - self.cumulative_counts[self.cur_len],
-            ),
-        ))
+        self.current.fix_loops();
+
+        &self.current
     }
 
     fn register_result<O>(&mut self, _program: &BfProgram, _result: &ProgResult<O>) {}
