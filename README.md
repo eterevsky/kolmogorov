@@ -17,14 +17,23 @@ Possible errors:
 * `<` when the program is at the leftmost cell of the tape.
 * Exceeding the step limit.
 
-### Arbitrary precision BrainFuck
+### Arbitrary precision Brainfuck
 
-BrainFuck program operating on a tape of arbitrary precision non-negative integers. The permitted operations include `+`, `-`, `<`, `>` and `[]`. The output of the program is the number in the cell 0 after the program has finished.
+Brainfuck program operating on a tape of arbitrary precision integers. The permitted operations include `+`, `-`, `<`, `>` and `[]`. The output of the program is the number in the cell 0 after the program has finished. If the output is negative, it is ignored, since other methods generate only positive numbers.
 
 Possible errors:
 
 * `<` when the program is at the leftmost cell of the tape.
-* `-` on the cell containing 0.
+* Producing negative output
+* Exceeding the step limit.
+
+### Counter register machine
+
+A register machine with a fixed number of registers and the operations `INC r`, `DEC r`, `JZ r l`. The last operation is "if register _r_ is zero, jump to position _l_ in the code". One of the registers is called `out` and is the dedicated output.
+
+Possible errors:
+
+* Negative output.
 * Exceeding the step limit.
 
 ### Turing machine with a counter

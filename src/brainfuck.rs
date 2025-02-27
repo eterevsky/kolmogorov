@@ -243,6 +243,10 @@ impl ProgGenerator<BfProgram> for BfGenerator {
                     || (!self.settings.has_minus
                         && self.current.0[i] == BfInstruction::Plus
                         && self.current.0[i + 1] == BfInstruction::Plus)
+                    || (self.current.0[i] == BfInstruction::Minus
+                        && self.current.0[i + 1] == BfInstruction::Plus)
+                    || (self.current.0[i] == BfInstruction::Plus
+                        && self.current.0[i + 1] == BfInstruction::Minus)
                 {
                     // println!("next1 {} {}", &self.current, i + 2);
                     let modified = next_program(&self.settings, &mut self.current.0, i + 2);
