@@ -2,6 +2,7 @@ mod bf_count;
 mod bf_num0;
 mod brainfuck;
 mod def;
+mod turing_count;
 
 use std::collections::HashSet;
 

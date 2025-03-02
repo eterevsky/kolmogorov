@@ -282,5 +282,5 @@ impl ProgGenerator<BfProgram> for BfGenerator {
         &self.current
     }
 
-    fn register_result<O>(&mut self, _program: &BfProgram, _result: &ProgResult<O>) {}
+    // fn register_result<O>(&mut self, _program: &BfProgram, _result: &ProgResult<O>) {}
 }

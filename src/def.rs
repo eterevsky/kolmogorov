@@ -8,7 +8,7 @@ pub enum ProgResult<Output> {
 pub trait ProgGenerator<Program> {
     fn next<'a>(&'a mut self) -> &'a Program;
 
-    fn register_result<O>(&mut self, program: &Program, result: &ProgResult<O>);
+    // fn register_result<O>(&mut self, program: &Program, result: &ProgResult<O>);
 }
 
 pub trait CompSystem {
