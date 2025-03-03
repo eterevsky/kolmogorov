@@ -1,3 +1,5 @@
+use std::{fmt::Display, hash::Hash};
+
 #[derive(Debug)]
 pub enum ProgResult<Output> {
     Out { output: Output, steps: usize },
@@ -7,8 +9,11 @@ pub enum ProgResult<Output> {
 
 pub trait ProgGenerator<Program> {
     fn next<'a>(&'a mut self) -> &'a Program;
+}
 
-    // fn register_result<O>(&mut self, program: &Program, result: &ProgResult<O>);
+// New generator of programs
+pub trait Generator<Program> {
+    fn next(&mut self) -> Option<(Program, usize)>;
 }
 
 pub trait CompSystem {
@@ -19,6 +24,16 @@ pub trait CompSystem {
     // in an error, or are generating the same output as the shorter programs,
     // can be skipped.
     fn generate(&self) -> impl ProgGenerator<Self::Program>;
+
+    fn execute(&self, program: &Self::Program, max_steps: usize) -> ProgResult<Self::Output>;
+}
+
+pub trait CompSystem2 {
+    type Output: Display + PartialEq + Eq + Hash + PartialOrd + Ord;
+    type Program: Clone + Display;
+
+    // Generate the valid programs.
+    fn generate(&self, limit: usize) -> impl Generator<Self::Program>;
 
     fn execute(&self, program: &Self::Program, max_steps: usize) -> ProgResult<Self::Output>;
 }

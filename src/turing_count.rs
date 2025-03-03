@@ -40,9 +40,9 @@ impl std::fmt::Display for TuringCountProgram {
         for i in 0..self.nstates {
             for v in 0..2 {
                 let rule = self.rules[i][v];
-                write!(f, " ({}{}  {}", get_state_name(self.nstates, i), v, get_state_name(self.nstates, rule.new_state))?; 
+                write!(f, " ({}{}  {}", get_state_name(self.nstates, i), v, get_state_name(self.nstates, rule.new_state))?;
                 if rule.new_state != self.nstates {
-                    write!(f, "{}{}", rule.tape_value as usize, DIRECTIONS[rule.move_right as usize])?; 
+                    write!(f, "{}{}", rule.tape_value as usize, DIRECTIONS[rule.move_right as usize])?;
                 }
                 write!(f, ")")?;
             }
