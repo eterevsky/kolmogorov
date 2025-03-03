@@ -1,4 +1,4 @@
-use crate::def::{ProgGenerator, ProgResult};
+use crate::def::ProgGenerator;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BfInstruction {
@@ -235,29 +235,29 @@ impl ProgGenerator<BfProgram> for BfGenerator {
             unverified = false;
 
             let len = self.current.0.len();
-            for i in min_affected..(len - 1) {
-                if self.current.0[i] == BfInstruction::Left
-                    && self.current.0[i + 1] == BfInstruction::Right
-                    || self.current.0[i] == BfInstruction::Right
-                        && self.current.0[i + 1] == BfInstruction::Left
-                    || (!self.settings.has_minus
-                        && self.current.0[i] == BfInstruction::Plus
-                        && self.current.0[i + 1] == BfInstruction::Plus)
-                    || (self.current.0[i] == BfInstruction::Minus
-                        && self.current.0[i + 1] == BfInstruction::Plus)
-                    || (self.current.0[i] == BfInstruction::Plus
-                        && self.current.0[i + 1] == BfInstruction::Minus)
-                {
-                    // println!("next1 {} {}", &self.current, i + 2);
-                    let modified = next_program(&self.settings, &mut self.current.0, i + 2);
-                    if modified < min_modified {
-                        min_modified = modified;
-                    }
-                    // println!("next2 {} {}", &self.current, i + 2);
-                    unverified = true;
-                    break;
-                }
-            }
+            // for i in min_affected..(len - 1) {
+            //     if self.current.0[i] == BfInstruction::Left
+            //         && self.current.0[i + 1] == BfInstruction::Right
+            //         || self.current.0[i] == BfInstruction::Right
+            //             && self.current.0[i + 1] == BfInstruction::Left
+            //         || (!self.settings.has_minus
+            //             && self.current.0[i] == BfInstruction::Plus
+            //             && self.current.0[i + 1] == BfInstruction::Plus)
+            //         || (self.current.0[i] == BfInstruction::Minus
+            //             && self.current.0[i + 1] == BfInstruction::Plus)
+            //         || (self.current.0[i] == BfInstruction::Plus
+            //             && self.current.0[i + 1] == BfInstruction::Minus)
+            //     {
+            //         // println!("next1 {} {}", &self.current, i + 2);
+            //         let modified = next_program(&self.settings, &mut self.current.0, i + 2);
+            //         if modified < min_modified {
+            //             min_modified = modified;
+            //         }
+            //         // println!("next2 {} {}", &self.current, i + 2);
+            //         unverified = true;
+            //         break;
+            //     }
+            // }
 
             if unverified {
                 continue;

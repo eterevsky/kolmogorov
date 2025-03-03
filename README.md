@@ -38,7 +38,7 @@ Possible errors:
 
 ### Turing machine with a counter
 
-A Turing machine on a binary tape infinite in both directions. Each transition rule has an extra boolean specifying whether to increment the output counter.
+A Turing machine on a binary tape infinite in both directions. The counter is incremented whenever the machine switches to state 0 (which is also the initial state).
 
 Possible errors:
 
