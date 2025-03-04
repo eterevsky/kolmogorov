@@ -29,5 +29,6 @@ fn run<CS: CompSystem2>(comp: &CS, max_size: usize) {
 }
 
 fn main() {
-    run(&BfCount::new(), 11);
+    // run(&bf_count::BfCount::new(), 11);
+    run(&bf_num0::BfNum0::new(), 11);
 }

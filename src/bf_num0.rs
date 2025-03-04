@@ -1,5 +1,18 @@
-use crate::brainfuck::{BfGenerator, BfProgram, BfInstruction};
-use crate::def::{CompSystem, ProgResult};
+use crate::brainfuck::{
+    BfNaiveGenerator, BfRawInstruction, BfSource,
+};
+use crate::def::{CompSystem2, ProgResult};
+use arrayvec::ArrayVec;
+
+#[derive(Clone, Copy)]
+enum Instruction {
+    Plus,
+    Minus,
+    Left,
+    Right,
+    StartLoop(usize),
+    EndLoop(usize),
+}
 
 #[derive(Debug)]
 pub struct BfNum0 {
@@ -10,6 +23,33 @@ impl BfNum0 {
         BfNum0 {}
     }
 
+    fn compile(source: &BfSource) -> ArrayVec<Instruction, 28> {
+        let mut open_loops = ArrayVec::<usize, 28>::new();
+        let mut program = ArrayVec::new();
+
+        for &instruction in source.0.iter() {
+            let inst = match instruction {
+                BfRawInstruction::Plus => Instruction::Plus,
+                BfRawInstruction::Minus => Instruction::Minus,
+                BfRawInstruction::Print => unreachable!(),
+                BfRawInstruction::Left => Instruction::Left,
+                BfRawInstruction::Right => Instruction::Right,
+                BfRawInstruction::StartLoop => {
+                    open_loops.push(program.len());
+                    Instruction::StartLoop(0)
+                }
+                BfRawInstruction::EndLoop => {
+                    let open = open_loops.pop().unwrap();
+                    program[open] = Instruction::StartLoop(program.len() + 1);
+                    Instruction::EndLoop(open)
+                }
+            };
+            program.push(inst);
+        }
+
+        program
+    }
+
     fn maybe_extend_tape(tape: &mut Vec<i32>, pos: usize) {
         while pos >= tape.len() {
             tape.push(0);
@@ -17,52 +57,61 @@ impl BfNum0 {
     }
 }
 
-impl CompSystem for BfNum0 {
-    type Output = u64;
-    type Program = BfProgram;
+impl CompSystem2 for BfNum0 {
+    type Output = i64;
+    type Program = BfSource;
 
-    fn generate(&self) -> BfGenerator {
-        BfGenerator::new(true, false)
+    fn valid_output(o: &i64) -> bool {
+        *o > 0
     }
 
-    fn execute(&self, program: &BfProgram, max_steps: usize) -> ProgResult<u64> {
+    fn generate(&self, limit: usize) -> BfNaiveGenerator {
+        BfNaiveGenerator::new(limit, true, false)
+    }
+
+    fn execute(&self, source: &BfSource, max_steps: usize) -> ProgResult<i64> {
+        let program = Self::compile(source);
+
         let mut step = 0;
         let mut tape = vec![0];
         let mut pos = 0;
         let mut ip = 0;
 
-        while step < max_steps && ip < program.0.len() {
-            let inst = program.0[ip];
+        while step < max_steps && ip < program.len() {
+            let inst = program[ip];
             match inst {
-                BfInstruction::Plus => {
+                Instruction::Plus => {
                     Self::maybe_extend_tape(&mut tape, pos);
                     tape[pos] += 1;
                     ip += 1;
                 }
-                BfInstruction::Minus => {
+                Instruction::Minus => {
                     Self::maybe_extend_tape(&mut tape, pos);
                     tape[pos] -= 1;
                     ip += 1;
                 }
-                BfInstruction::Left => {
+                Instruction::Left => {
                     if pos == 0 {
                         return ProgResult::Error;
                     }
                     pos -= 1;
                     ip += 1;
                 }
-                BfInstruction::Right => {
+                Instruction::Right => {
                     pos += 1;
                     ip += 1;
                 }
-                BfInstruction::StartLoop(offset) => {
+                Instruction::StartLoop(target) => {
                     Self::maybe_extend_tape(&mut tape, pos);
-                    ip += if tape[pos] != 0 { 1 } else { offset }
+                    if tape[pos] != 0 {
+                        ip += 1
+                    } else {
+                        ip = target
+                    }
                 }
-                BfInstruction::EndLoop(offset) => {
-                    ip -= offset;
+                Instruction::EndLoop(target) => {
+                    ip = target;
                 }
-                _ => ()
             }
             step += 1;
         }
@@ -70,7 +119,7 @@ impl CompSystem for BfNum0 {
         if step >= max_steps {
             ProgResult::Timeout
         } else if tape[0] > 0 {
-            ProgResult::Out { output: tape[0] as u64, steps: step }
+            ProgResult::Out { output: tape[0] as i64, steps: step }
         } else {
             ProgResult::Error
         }
