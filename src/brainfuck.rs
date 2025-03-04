@@ -1,11 +1,12 @@
-use crate::def::{Generator, ProgGenerator};
+use crate::def::{Generator, ProgGenerator, Sized};
 use arrayvec::ArrayVec;
 
 // So that ArrayString of this size fit in 32 bytes.
 const BF_MAX_LEN: usize = 28;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BfRawInstruction {
+pub
+enum BfRawInstruction {
     Plus,
     Minus,
     Print,
@@ -32,6 +33,12 @@ impl std::fmt::Display for BfSource {
             }
         }
         std::fmt::Result::Ok(())
+    }
+}
+
+impl Sized for BfSource {
+    fn size(&self) -> usize {
+        self.0.len()
     }
 }
 

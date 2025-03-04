@@ -1,15 +1,17 @@
-use crate::def::{CompSystem2, ProgResult};
+use crate::def::{CompSystem2, ProgResult, Sized};
 use std::collections::HashMap;
 
-struct OutputStat<C: CompSystem2> {
-    min_program: C::Program,
-    count: usize,
+pub struct OutputStat<C: CompSystem2> {
+    pub min_program: C::Program,
+    pub count: usize,
 }
 
 pub struct Stat<C: CompSystem2> {
     error: usize,
     timeout: usize,
-    outputs: HashMap<C::Output, OutputStat<C>>,
+    invalid_output: usize,
+    pub outputs: HashMap<C::Output, OutputStat<C>>,
+    runs: Vec<usize>,
 }
 
 impl<C: CompSystem2> Stat<C> {
@@ -17,26 +19,55 @@ impl<C: CompSystem2> Stat<C> {
         Stat {
             error: 0,
             timeout: 0,
+            invalid_output: 0,
             outputs: HashMap::new(),
+            runs: Vec::new(),
         }
     }
 
     pub fn register(&mut self, program: &C::Program, result: ProgResult<C::Output>, weight: usize) {
+        let size = program.size();
+        while size >= self.runs.len() {
+            self.runs.push(0);
+        }
+        self.runs[size] += 1;
         match result {
             ProgResult::Error => {
-                self.error += 1;
+                self.error += weight;
             }
             ProgResult::Timeout => {
-                self.timeout += 1;
+                self.timeout += weight;
             }
             ProgResult::Out { output, steps: _ } => {
-                let mut entry = self.outputs.entry(output).or_insert(OutputStat {
-                    min_program: program.clone(),
-                    count: 0,
-                });
-                entry.count += weight;
+                if C::valid_output(&output) {
+                    let entry = self.outputs.entry(output).or_insert(OutputStat {
+                        min_program: program.clone(),
+                        count: 0,
+                    });
+                    entry.count += weight;
+                } else {
+                    self.invalid_output += weight;
+                }
             }
         }
+    }
+
+    pub fn matches_outputs(&self, other: &Self) -> bool {
+        for (out, count1) in self.outputs.iter() {
+            let count2 = other.outputs.get(out).map(|os| os.count);
+            if count2 != Some(count1.count) {
+                return false;
+            }
+        }
+
+        for (out, count2) in other.outputs.iter() {
+            let count1 = self.outputs.get(out).map(|os| os.count);
+            if count1 != Some(count2.count) {
+                return false;
+            }
+        }
+
+        true
     }
 
     pub fn print(&self) {
@@ -53,6 +84,12 @@ impl<C: CompSystem2> Stat<C> {
                 &s.min_program,
                 s.count,
             );
+        }
+        println!("Runs:");
+        for i in 0..self.runs.len() {
+            if self.runs[i] > 0 {
+                println!("{}  {}", i, self.runs[i]);
+            }
         }
     }
 }

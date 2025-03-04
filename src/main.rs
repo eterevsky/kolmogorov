@@ -9,10 +9,9 @@ use bf_count::BfCount;
 
 use crate::def::{CompSystem2, Generator};
 
-fn main() {
-    let comp = BfCount::new();
-    let mut gen = comp.generate(9);
-    let mut stat: stat::Stat<BfCount> = stat::Stat::new();
+fn run<CS: CompSystem2>(comp: &CS, max_size: usize) {
+    let mut gen = comp.generate(max_size);
+    let mut stat: stat::Stat<CS> = stat::Stat::new();
 
     while let Some((program, weight)) = gen.next() {
         let result = comp.execute(&program, 1000);
@@ -27,6 +26,8 @@ fn main() {
     }
 
     stat.print();
+}
 
-    return;
+fn main() {
+    run(&BfCount::new(), 11);
 }
