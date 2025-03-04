@@ -1,4 +1,4 @@
-use crate::def::{CompSystem, ProgGenerator, ProgResult};
+use crate::def::{CompSystem2, Generator, ProgResult, Sized};
 
 #[derive(Clone, Copy)]
 struct TuringCountRule {
@@ -29,10 +29,15 @@ fn get_state_name(nstates: usize, state: usize) -> char {
     }
 }
 
+#[derive(Clone)]
 pub struct TuringCountProgram {
     // Number of non-terminal states. Terminal state is #nstates
     nstates: usize,
     rules: Vec<[TuringCountRule; 2]>,
+}
+
+impl Sized for TuringCountProgram {
+    fn size(&self) -> usize { self.nstates }
 }
 
 impl std::fmt::Display for TuringCountProgram {
@@ -40,11 +45,10 @@ impl std::fmt::Display for TuringCountProgram {
         for i in 0..self.nstates {
             for v in 0..2 {
                 let rule = self.rules[i][v];
-                write!(f, " ({}{}  {}", get_state_name(self.nstates, i), v, get_state_name(self.nstates, rule.new_state))?;
+                write!(f, " {}{}:{}", get_state_name(self.nstates, i), v, get_state_name(self.nstates, rule.new_state))?;
                 if rule.new_state != self.nstates {
                     write!(f, "{}{}", rule.tape_value as usize, DIRECTIONS[rule.move_right as usize])?;
                 }
-                write!(f, ")")?;
             }
         }
         std::fmt::Result::Ok(())
@@ -54,35 +58,34 @@ impl std::fmt::Display for TuringCountProgram {
 pub struct TuringCountGenerator {
     index_within_nstates: usize,
     total_for_nstates: usize,
-    current: TuringCountProgram,
+    max_states: usize,
+    nstates: usize,
 }
 
 impl TuringCountGenerator {
-    fn new() -> Self {
+    fn new(max_states: usize) -> Self {
         TuringCountGenerator {
+            max_states,
             index_within_nstates: 0,
             total_for_nstates: 0,
-            current: TuringCountProgram {
-                nstates: 0,
-                rules: Vec::new(),
-            }
+            nstates: 0,
         }
     }
 
     fn increment_nstates(&mut self) {
-        self.current.nstates += 1;
+        self.nstates += 1;
         self.index_within_nstates = 0;
         self.total_for_nstates = 1;
 
-        for _ in 0..self.current.nstates {
-            self.total_for_nstates *= 16 * (self.current.nstates + 1) * (self.current.nstates + 1);
+        for _ in 0..self.nstates {
+            self.total_for_nstates *= 16 * (self.nstates + 1) * (self.nstates + 1);
         }
-        println!("nstates: {}, total machines: {}", self.current.nstates, self.total_for_nstates);
+        println!("nstates: {}, total machines: {}", self.nstates, self.total_for_nstates);
     }
 
     fn rule_from_idx(&self, idx: &mut usize) -> TuringCountRule {
-        let new_state = *idx % (self.current.nstates + 1);
-        *idx /= self.current.nstates + 1;
+        let new_state = *idx % (self.nstates + 1);
+        *idx /= self.nstates + 1;
         let tape_value = (*idx % 2) != 0;
         *idx /= 2;
         let move_right = (*idx % 2) != 0;
@@ -96,22 +99,28 @@ impl TuringCountGenerator {
     }
 }
 
-impl ProgGenerator<TuringCountProgram> for TuringCountGenerator {
-    fn next<'a>(&'a mut self) -> &'a TuringCountProgram {
+impl Generator<TuringCountProgram> for TuringCountGenerator {
+    fn next(&mut self) -> Option<(TuringCountProgram, usize)> {
         if self.index_within_nstates >= self.total_for_nstates {
             self.increment_nstates();
         }
+        if self.nstates > self.max_states {
+            return None
+        }
         let mut idx = self.index_within_nstates;
-        self.current.rules.clear();
-        for _istate in 0..self.current.nstates {
+        let mut program = TuringCountProgram {
+            nstates: self.nstates,
+            rules: Vec::new(),
+        };
+        for _istate in 0..self.nstates {
             let rule_for_0 = self.rule_from_idx(&mut idx);
             let rule_for_1 = self.rule_from_idx(&mut idx);
 
-            self.current.rules.push([rule_for_0, rule_for_1]);
+            program.rules.push([rule_for_0, rule_for_1]);
         }
         self.index_within_nstates += 1;
 
-        &self.current
+        Some((program, 1))
     }
 }
 
@@ -123,7 +132,7 @@ impl TuringCount {
     }
 }
 
-impl CompSystem for TuringCount {
+impl CompSystem2 for TuringCount {
     type Output = u64;
     type Program = TuringCountProgram;
 
@@ -178,7 +187,9 @@ impl CompSystem for TuringCount {
         }
     }
 
-    fn generate(&self) -> TuringCountGenerator {
-        TuringCountGenerator::new()
+    fn generate(&self, limit: usize) -> TuringCountGenerator {
+        TuringCountGenerator::new(limit)
     }
+
+    fn valid_output(o: &u64) -> bool { *o > 0 }
 }
