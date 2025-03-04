@@ -125,3 +125,35 @@ impl CompSystem2 for BfNum0 {
         }
     }
 }
+
+mod test {
+    use super::*;
+    use crate::stat::Stat;
+    use crate::def::Generator;
+
+#[test]
+fn results_match() {
+    let comp = BfNum0::new();
+
+    for max_size in 1..9 {
+        let mut gen1 = comp.generate(max_size);
+        let mut stat1: Stat<BfNum0> = Stat::new();
+
+        while let Some((program, weight)) = gen1.next() {
+            let result = comp.execute(&program, 1000);
+            stat1.register(&program, result, weight);
+        }
+
+        let mut gen2 = BfNaiveGenerator::new(max_size, true, false);
+        let mut stat2: Stat<BfNum0> = Stat::new();
+
+        while let Some((program, weight)) = gen2.next() {
+            let result = comp.execute(&program, 1000);
+            stat2.register(&program, result, weight);
+        }
+
+        assert!(stat1.matches_outputs(&stat2));
+    }
+}
+
+}

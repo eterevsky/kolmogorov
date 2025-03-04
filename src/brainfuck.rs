@@ -1,4 +1,4 @@
-use crate::def::{Generator, ProgGenerator, Sized};
+use crate::def::{Generator, Sized};
 use arrayvec::ArrayVec;
 
 // So that ArrayString of this size fit in 32 bytes.

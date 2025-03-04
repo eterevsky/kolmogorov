@@ -153,7 +153,6 @@ fn results_match() {
         }
 
         assert!(stat1.matches_outputs(&stat2));
-
     }
 }
 

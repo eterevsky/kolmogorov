@@ -5,8 +5,6 @@ mod def;
 mod stat;
 mod turing_count;
 
-use bf_count::BfCount;
-
 use crate::def::{CompSystem2, Generator};
 
 fn run<CS: CompSystem2>(comp: &CS, max_size: usize) {
