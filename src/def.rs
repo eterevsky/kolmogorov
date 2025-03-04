@@ -15,7 +15,7 @@ pub trait Sized {
     fn size(&self) -> usize;
 }
 
-pub trait CompSystem2 {
+pub trait System {
     type Output: Display + PartialEq + Eq + Hash + PartialOrd + Ord;
     type Program: Clone + Display + Sized;
 

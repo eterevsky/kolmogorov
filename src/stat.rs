@@ -1,12 +1,12 @@
-use crate::def::{CompSystem2, ProgResult, Sized};
+use crate::def::{System, ProgResult, Sized};
 use std::collections::HashMap;
 
-pub struct OutputStat<C: CompSystem2> {
+pub struct OutputStat<C: System> {
     pub min_program: C::Program,
     pub count: usize,
 }
 
-pub struct Stat<C: CompSystem2> {
+pub struct Stat<C: System> {
     error: usize,
     timeout: usize,
     invalid_output: usize,
@@ -14,7 +14,7 @@ pub struct Stat<C: CompSystem2> {
     runs: Vec<usize>,
 }
 
-impl<C: CompSystem2> Stat<C> {
+impl<C: System> Stat<C> {
     pub fn new() -> Self {
         Stat {
             error: 0,
@@ -52,6 +52,7 @@ impl<C: CompSystem2> Stat<C> {
         }
     }
 
+    #[cfg(test)]
     pub fn matches_outputs(&self, other: &Self) -> bool {
         for (out, count1) in self.outputs.iter() {
             let count2 = other.outputs.get(out).map(|os| os.count);

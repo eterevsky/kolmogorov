@@ -1,4 +1,4 @@
-use crate::def::{CompSystem2, Generator, ProgResult, Sized};
+use crate::def::{System, Generator, ProgResult, Sized};
 
 #[derive(Clone, Copy)]
 struct TuringCountRule {
@@ -132,7 +132,7 @@ impl TuringCount {
     }
 }
 
-impl CompSystem2 for TuringCount {
+impl System for TuringCount {
     type Output = u64;
     type Program = TuringCountProgram;
 

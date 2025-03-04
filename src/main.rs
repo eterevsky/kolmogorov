@@ -5,9 +5,9 @@ mod def;
 mod stat;
 mod turing_count;
 
-use crate::def::{CompSystem2, Generator};
+use crate::def::{System, Generator};
 
-fn run<CS: CompSystem2>(comp: &CS, max_size: usize) {
+fn run<CS: System>(comp: &CS, max_size: usize) {
     let mut gen = comp.generate(max_size);
     let mut stat: stat::Stat<CS> = stat::Stat::new();
 

@@ -1,7 +1,7 @@
 use crate::brainfuck::{
     BfNaiveGenerator, BfRawInstruction, BfSource,
 };
-use crate::def::{CompSystem2, ProgResult};
+use crate::def::{System, ProgResult};
 use arrayvec::ArrayVec;
 
 #[derive(Clone, Copy)]
@@ -56,7 +56,7 @@ impl BfCount {
     }
 }
 
-impl CompSystem2 for BfCount {
+impl System for BfCount {
     type Output = u64;
     type Program = BfSource;
 
@@ -126,6 +126,7 @@ impl CompSystem2 for BfCount {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use crate::stat::Stat;
