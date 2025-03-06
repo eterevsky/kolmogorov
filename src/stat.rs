@@ -25,12 +25,13 @@ impl<C: System> Stat<C> {
         }
     }
 
-    pub fn register(&mut self, program: &C::Program, result: ProgResult<C::Output>, weight: usize) {
+    pub fn register(&mut self, program: &C::Program, result: &ProgResult<C::Output>, weight: usize) -> bool {
         let size = program.size();
         while size >= self.runs.len() {
             self.runs.push(0);
         }
         self.runs[size] += 1;
+        let mut new = false;
         match result {
             ProgResult::Error => {
                 self.error += weight;
@@ -38,18 +39,25 @@ impl<C: System> Stat<C> {
             ProgResult::Timeout => {
                 self.timeout += weight;
             }
-            ProgResult::Out { output, steps: _ } => {
-                if C::valid_output(&output) {
-                    let entry = self.outputs.entry(output).or_insert(OutputStat {
-                        min_program: program.clone(),
-                        count: 0,
-                    });
+            ProgResult::Out { ref output, steps: _ } => {
+                if C::valid_output(output) {
+                    let output: C::Output = (*output).clone();
+                    let entry = self.outputs.entry(output).or_insert_with(|| {
+                        new = true;
+                        OutputStat {
+                            min_program: program.clone(),
+                            count: 0,
+                        }
+                    }
+                    );
                     entry.count += weight;
                 } else {
                     self.invalid_output += weight;
                 }
             }
         }
+
+        new
     }
 
     #[cfg(test)]

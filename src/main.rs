@@ -5,22 +5,26 @@ mod def;
 mod stat;
 mod turing_count;
 
-use crate::def::{System, Generator};
+use crate::def::{System, Generator, ProgResult};
 
 fn run<CS: System>(comp: &CS, max_size: usize) {
     let mut gen = comp.generate(max_size);
     let mut stat: stat::Stat<CS> = stat::Stat::new();
+    let mut max_steps = 0;
 
     while let Some((program, weight)) = gen.next() {
-        let result = comp.execute(&program, 1000);
-        // match result {
-        //     ProgResult::Error => println!("{}  Error", program),
-        //     ProgResult::Timeout => println!("{}  Timeout", program),
-        //     ProgResult::Out { output, steps } => {
-        //         println!("{}  {} in {} steps", program, output, steps)
-        //     }
-        // };
-        stat.register(&program, result, weight);
+        let result = comp.execute(&program, std::cmp::max(1000, 4 * max_steps));
+        let new = stat.register(&program, &result, weight);
+        if let ProgResult::Out { output, steps } = result {
+            if steps > max_steps {
+                max_steps = steps;
+                println!("Max steps: {}", max_steps);
+            }
+
+            if new {
+                println!("{}  {}", output, program);
+            }
+        }
     }
 
     stat.print();
@@ -29,5 +33,5 @@ fn run<CS: System>(comp: &CS, max_size: usize) {
 fn main() {
     // run(&bf_count::BfCount::new(), 11);
     // run(&bf_num0::BfNum0::new(), 11);
-    run(&turing_count::TuringCount::new(), 3);
+    run(&turing_count::TuringCount::new(), 4);
 }

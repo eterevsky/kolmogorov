@@ -16,7 +16,7 @@ pub trait Sized {
 }
 
 pub trait System {
-    type Output: Display + PartialEq + Eq + Hash + PartialOrd + Ord;
+    type Output: Clone + Display + PartialEq + Eq + Hash + PartialOrd + Ord;
     type Program: Clone + Display + Sized;
 
     // Generate the valid programs.

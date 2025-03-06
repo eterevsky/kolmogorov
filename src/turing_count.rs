@@ -45,9 +45,11 @@ impl std::fmt::Display for TuringCountProgram {
         for i in 0..self.nstates {
             for v in 0..2 {
                 let rule = self.rules[i][v];
-                write!(f, " {}{}:{}", get_state_name(self.nstates, i), v, get_state_name(self.nstates, rule.new_state))?;
-                if rule.new_state != self.nstates {
-                    write!(f, "{}{}", rule.tape_value as usize, DIRECTIONS[rule.move_right as usize])?;
+                write!(f, " {}{}:", get_state_name(self.nstates, i), v)?;
+                if rule.new_state == self.nstates {
+                    write!(f, "Z")?;
+                } else  {
+                    write!(f, "{}{}{}", rule.tape_value as usize, DIRECTIONS[rule.move_right as usize], get_state_name(self.nstates, rule.new_state))?;
                 }
             }
         }
@@ -78,18 +80,18 @@ impl TuringCountGenerator {
         self.total_for_nstates = 1;
 
         for _ in 0..self.nstates {
-            self.total_for_nstates *= 16 * (self.nstates + 1) * (self.nstates + 1);
+            self.total_for_nstates *= (4 * self.nstates + 1) * (4 * self.nstates + 1);
         }
         println!("nstates: {}, total machines: {}", self.nstates, self.total_for_nstates);
     }
 
     fn rule_from_idx(&self, idx: &mut usize) -> TuringCountRule {
-        let new_state = *idx % (self.nstates + 1);
-        *idx /= self.nstates + 1;
-        let tape_value = (*idx % 2) != 0;
-        *idx /= 2;
-        let move_right = (*idx % 2) != 0;
-        *idx /= 2;
+        let rule_idx = *idx % (4 * self.nstates + 1);
+        *idx /= 4 * self.nstates + 1;
+
+        let new_state = rule_idx / 4;
+        let tape_value = (rule_idx & 2) != 0;
+        let move_right = (rule_idx & 1) != 0;
 
         TuringCountRule {
             new_state,
