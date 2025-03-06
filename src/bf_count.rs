@@ -142,7 +142,7 @@ fn results_match() {
 
         while let Some((program, weight)) = gen1.next() {
             let result = comp.execute(&program, 1000);
-            stat1.register(&program, result, weight);
+            stat1.register(&program, &result, weight);
         }
 
         let mut gen2 = BfNaiveGenerator::new(max_size, false, true);
@@ -150,7 +150,7 @@ fn results_match() {
 
         while let Some((program, weight)) = gen2.next() {
             let result = comp.execute(&program, 1000);
-            stat2.register(&program, result, weight);
+            stat2.register(&program, &result, weight);
         }
 
         assert!(stat1.matches_outputs(&stat2));
